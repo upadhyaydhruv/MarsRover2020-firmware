@@ -1,4 +1,3 @@
-
 #include "ActuatorController.h"
 #include <cmath>
 
@@ -41,12 +40,12 @@ mbed_error_status_t ActuatorController::setControlMode(t_actuatorControlMode con
 
 	m_controlMode = controlMode;
 
-	switch (controlMode) {
+	 switch (controlMode) {
 
         case motorPower:
             m_controlMode = motorPower;
             setMotorPower_Percentage(0.0f);
-			return update();
+            return MBED_SUCCESS;
 
         case velocity:
             m_velocityPIDController.reset();
@@ -81,13 +80,12 @@ mbed_error_status_t ActuatorController::setMotorPower_Percentage(float percentag
 }
 
 mbed_error_status_t ActuatorController::setVelocity_DegreesPerSec(float degreesPerSec) {
-	if (m_controlMode != velocity) {
+	if (m_controlMode != velocity) 
 		return MBED_ERROR_INVALID_OPERATION;
-	}
 
 	// Limit velocity setpoint to zero if arm is out of bounds
 	if ( (degreesPerSec < 0.0 && isPastMinAngle()) ||
-		 (degreesPerSec > 0.0 && isPastMaxAngle()) ) {
+		(degreesPerSec > 0.0 && isPastMaxAngle()) ) {
 
 		degreesPerSec = 0.0;
 	}
@@ -103,7 +101,9 @@ mbed_error_status_t ActuatorController::setVelocity_DegreesPerSec(float degreesP
 	m_velocityPIDController.setSetPoint(degreesPerSec);
 
 	return MBED_SUCCESS;
+
 }
+
 
 mbed_error_status_t ActuatorController::setAngle_Degrees(float degrees) {
 	if (m_controlMode != position) {
@@ -160,37 +160,49 @@ mbed_error_status_t ActuatorController::update() {
 
 			m_velocityPIDController.setInterval(updateInterval);
 			m_velocityPIDController.setProcessValue(getVelocity_DegreesPerSec());
-			r_motor.setPower(m_velocityPIDController.compute());
 
+			switch (r_motor.getType()) {
+				case Motor::motor:
+					r_motor.setPower(m_velocityPIDController.compute());
+					break;
+				case Motor::cont_servo:
+					r_motor.servoSetSpeed(m_velocityPIDController.compute()*r_motor.servoGetMaxSpeed());
+					break;
+				default:
+					return MBED_ERROR_INVALID_OPERATION;
+			}
 			break;
 
 		case position:
-			m_positionPIDController.setInterval(updateInterval);
-			m_positionPIDController.setProcessValue(getAngle_Degrees());
-			r_motor.setPower(m_positionPIDController.compute());
-
+			switch(r_motor.getType()) {
+				case Motor::motor:
+					m_positionPIDController.setInterval(updateInterval);
+					m_positionPIDController.setProcessValue(getAngle_Degrees());
+					r_motor.setPower(m_positionPIDController.compute());
+					break;		
+				case Motor::lim_servo:
+					r_motor.servoSetPosition(m_positionPIDController.getSetPoint());
+					break;
+				default:
+					return MBED_ERROR_INVALID_OPERATION;	
+			}
 			break;
 		
 		default: 
 			return MBED_ERROR_INVALID_OPERATION;
 	}
 
+	// Only triggers if motorType is motor
 	// Always constrain the motor power to 0 or the reverse direction (away from limit switch) 
 	// if the corresponding limit switch is triggered
-	if ( (r_motor.getPower() < 0.0 && isLimSwitchMinTriggered()) ||
-	     (r_motor.getPower() > 0.0 && isLimSwitchMaxTriggered()) ) {
-
-		r_motor.setPower(0.0);
-	}
+	if(r_motor.motorType == Motor::motor)
+		if ( (r_motor.getPower() < 0.0 && isLimSwitchMinTriggered()) ||
+			(r_motor.getPower() > 0.0 && isLimSwitchMaxTriggered()) ) {
+			r_motor.setPower(0.0);
+		}
 
 	// TODO: Add watchdogging (feed here)
 
-	return MBED_SUCCESS;
-}
-
-
-mbed_error_status_t ActuatorController::resetEncoder() {
-	r_encoder.reset();
 	return MBED_SUCCESS;
 }
 

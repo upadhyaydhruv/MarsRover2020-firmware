@@ -5,6 +5,7 @@
 #include "Encoder.h"
 #include "PID.h"
 #include "PinNames.h"
+#include "Servo.h"
 
 static DigitalIn NULL_DIGITAL_IN = DigitalIn(NC);
 
@@ -23,7 +24,7 @@ public:
 
 		float minMotorPower_Percentage = -1.0, maxMotorPower_Percentage = +1.0;
 		float minVelocity_DegreesPerSec = -10.0, maxVelocity_DegreesPerSec = +10.0;
-		float minAngle_Degrees = -90, maxAngle_Degrees = +90;
+		float minAngle_Degrees, maxAngle_Degrees;
 
 		PID::t_pidConfig velocityPID, positionPID;
 
@@ -38,17 +39,18 @@ public:
 
 	mbed_error_status_t setControlMode(t_actuatorControlMode controlMode);
 	
+
 	mbed_error_status_t setMotorPower_Percentage(float percentage);
-	mbed_error_status_t setVelocity_DegreesPerSec(float degreesPerSec);
-	mbed_error_status_t setAngle_Degrees(float degrees);
+	mbed_error_status_t setVelocity_DegreesPerSec(float degreesPerSec); // Need to mod for Servo
+	mbed_error_status_t setAngle_Degrees(float degrees); // Need to mod for Servo
 
 	mbed_error_status_t setMotionData(float motionData);
 
 	t_actuatorControlMode getControlMode();
 
 	float getMotorPower_Percentage();
-	float getVelocity_DegreesPerSec();
-	float getAngle_Degrees();
+	float getVelocity_DegreesPerSec(); // Need to mod for Servo
+	float getAngle_Degrees(); // Need to mod for Servo
 
 	mbed_error_status_t update();
 
