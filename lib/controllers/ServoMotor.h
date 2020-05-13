@@ -2,7 +2,7 @@
  
 #include "mbed.h"
 #include "Motor.h"
-#include "Servo.h"
+#include "ContServo.h"
  
 // Control a continuous rotation servo like a motor
 
@@ -36,7 +36,7 @@ public:
     float getPower();
  
 protected:
-    Servo m_servo;
+    Servo* m_servo;
     bool m_inverted;
     float m_limit;
 };
