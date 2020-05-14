@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ActuatorController.h"
-#include "Servo.h"
+#include "LimServo.h"
 
 class ClawController : public ActuatorController {
 
@@ -9,7 +9,7 @@ public:
 
     explicit ClawController(t_actuatorConfig actuatorConfig, 
                        Motor &motor, Encoder &encoder,  
-                       DigitalIn &limSwitchMax, AnalogIn &forceSensor, Servo &tooltipServo,
+                       DigitalIn &limSwitchMax, AnalogIn &forceSensor, LimServo &tooltipServo,
                        float tooltipExtendedAngle_Degrees = 180.0, float tooltipRetractedAngle_Degrees = 0.0,
                        float calibrationTimeout_Seconds = 10.0);
 
@@ -33,7 +33,7 @@ public:
 private:
 
     AnalogIn &r_forceSensor;
-    Servo    &r_tooltipServo;
+    LimServo &r_tooltipServo;
 
     float m_tooltipExtendedAngle_Degrees;
     float m_tooltipRetractedAngle_Degrees;
