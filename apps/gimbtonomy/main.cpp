@@ -5,6 +5,8 @@
 
 #include "CANMsg.h"
 #include "Encoder.h"
+#include "ContServo.h"
+#include "LimServo.h"
 #include "ActuatorController.h"
 #include "EncoderAbsolute_PWM.h"
 #include "Neopixel_Blocking.h"
