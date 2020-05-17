@@ -5,7 +5,6 @@
 #include "Encoder.h"
 #include "PID.h"
 #include "PinNames.h"
-#include "Servo.h"
 
 static DigitalIn NULL_DIGITAL_IN = DigitalIn(NC);
 
