@@ -1,3 +1,8 @@
+/* mbed Microcontroller Library
+ * Copyright (c) 2018 ARM Limited
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "mbed.h"
 #include "mbed_config.h"
 #include "can_config.h"

@@ -37,4 +37,3 @@ float Motor::getPower() {
     m_dir?temp = m_pwm.read():temp = -m_pwm.read();
     return temp;
 }
-

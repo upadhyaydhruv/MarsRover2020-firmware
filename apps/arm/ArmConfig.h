@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Encoder.h"
 #include "ActuatorController.h"
+#include "Encoder.h"
 
 constexpr uint8_t FLAG_DISABLE_LIMIT_SWITCH_CHECKS = (1U << 0);
 constexpr uint8_t FLAG_DISABLE_ANGLE_BOUNDS_CHECKS = (1U << 1);
@@ -79,4 +79,4 @@ namespace ArmConfig {
         3.0
     };
 
-}
+} // namespace ArmConfig
