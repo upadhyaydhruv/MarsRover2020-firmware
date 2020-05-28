@@ -29,7 +29,8 @@ EncoderAbsolute_PWM turnTableEncoder(ArmConfig::turnTableEncoderConfig);
 EncoderAbsolute_PWM shoulderEncoder(ArmConfig::shoulderEncoderConfig);
 EncoderAbsolute_PWM elbowEncoder(ArmConfig::elbowEncoderConfig);
 EncoderRelative_Quadrature wristLeftEncoder(ArmConfig::wristLeftEncoderConfig);
-EncoderRelative_Quadrature wristRightEncoder(ArmConfig::wristRightEncoderConfig);
+EncoderRelative_Quadrature
+    wristRightEncoder(ArmConfig::wristRightEncoderConfig);
 EncoderRelative_Quadrature clawEncoder(ArmConfig::clawEncoderConfig);
 
 // Limit switches
@@ -46,17 +47,24 @@ DigitalIn clawLimOpen(LIM_CLAW_OPEN);
 AnalogIn clawForceSensor(FORCE_CLAW);
 
 // Rotary actuators
-ActuatorController turnTableActuator(ArmConfig::turnTableActuatorConfig, turnTableMotor, turnTableEncoder,
+ActuatorController turnTableActuator(ArmConfig::turnTableActuatorConfig,
+                                     turnTableMotor, turnTableEncoder,
                                      turnTableLimRight, turnTableLimLeft);
-ActuatorController shoulderActuator(ArmConfig::shoulderActuatorConfig, shoulderMotor, shoulderEncoder);
-ActuatorController elbowActuator(ArmConfig::elbowActuatorConfig, elbowMotor, elbowEncoder, elbowLimDown, elbowLimUp);
-ActuatorController wristLeftActuator(ArmConfig::wristLeftActuatorConfig, wristLeftMotor, wristLeftEncoder);
-ActuatorController wristRightActuator(ArmConfig::wristRightActuatorConfig, wristRightMotor, wristRightEncoder);
+ActuatorController shoulderActuator(ArmConfig::shoulderActuatorConfig,
+                                    shoulderMotor, shoulderEncoder);
+ActuatorController elbowActuator(ArmConfig::elbowActuatorConfig, elbowMotor,
+                                 elbowEncoder, elbowLimDown, elbowLimUp);
+ActuatorController wristLeftActuator(ArmConfig::wristLeftActuatorConfig,
+                                     wristLeftMotor, wristLeftEncoder);
+ActuatorController wristRightActuator(ArmConfig::wristRightActuatorConfig,
+                                      wristRightMotor, wristRightEncoder);
 
 // Complex controllers
-DifferentialWristController wristController(wristLeftActuator, wristRightActuator, wristLimUp, wristLimCenter,
-                                            wristLimDown);
-ClawController clawController(ArmConfig::clawActuatorConfig, clawMotor, clawEncoder, clawLimOpen, clawForceSensor,
+DifferentialWristController wristController(wristLeftActuator,
+                                            wristRightActuator, wristLimUp,
+                                            wristLimCenter, wristLimDown);
+ClawController clawController(ArmConfig::clawActuatorConfig, clawMotor,
+                              clawEncoder, clawLimOpen, clawForceSensor,
                               clawTooltipServo, 180.0, 0.0);
 
 /*** ARM COMMAND HANDLER FUNCTIONS ***/
@@ -90,18 +98,18 @@ static mbed_error_status_t setControlMode(CANMsg &msg) {
   msg.getPayload(controlMode);
 
   switch (msg.id) {
-    case CANID::SET_TURNTABLE_CONTROL_MODE:
-      return turnTableActuator.setControlMode(controlMode);
-    case CANID::SET_SHOULDER_CONTROL_MODE:
-      return shoulderActuator.setControlMode(controlMode);
-    case CANID::SET_ELBOW_CONTROL_MODE:
-      return elbowActuator.setControlMode(controlMode);
-    case CANID::SET_WRIST_CONTROL_MODE:
-      return wristController.setControlMode(controlMode);
-    case CANID::SET_CLAW_CONTROL_MODE:
-      return clawController.setControlMode(controlMode);
-    default:
-      return MBED_ERROR_INVALID_ARGUMENT;
+  case CANID::SET_TURNTABLE_CONTROL_MODE:
+    return turnTableActuator.setControlMode(controlMode);
+  case CANID::SET_SHOULDER_CONTROL_MODE:
+    return shoulderActuator.setControlMode(controlMode);
+  case CANID::SET_ELBOW_CONTROL_MODE:
+    return elbowActuator.setControlMode(controlMode);
+  case CANID::SET_WRIST_CONTROL_MODE:
+    return wristController.setControlMode(controlMode);
+  case CANID::SET_CLAW_CONTROL_MODE:
+    return clawController.setControlMode(controlMode);
+  default:
+    return MBED_ERROR_INVALID_ARGUMENT;
   }
 
   return MBED_SUCCESS;
@@ -113,20 +121,20 @@ static mbed_error_status_t setMotionData(CANMsg &msg) {
   msg.getPayload(motionData);
 
   switch (msg.id) {
-    case CANID::SET_TURNTABLE_MOTIONDATA:
-      return turnTableActuator.setMotionData(motionData);
-    case CANID::SET_SHOULDER_MOTIONDATA:
-      return shoulderActuator.setMotionData(motionData);
-    case CANID::SET_ELBOW_MOTIONDATA:
-      return elbowActuator.setMotionData(motionData);
-    case CANID::SET_WRIST_PITCH_MOTIONDATA:
-      return wristController.setPitchMotionData(motionData);
-    case CANID::SET_WRIST_ROLL_MOTIONDATA:
-      return wristController.setRollMotionData(motionData);
-    case CANID::SET_CLAW_MOTIONDATA:
-      return clawController.setMotionData(motionData);
-    default:
-      return MBED_ERROR_INVALID_ARGUMENT;
+  case CANID::SET_TURNTABLE_MOTIONDATA:
+    return turnTableActuator.setMotionData(motionData);
+  case CANID::SET_SHOULDER_MOTIONDATA:
+    return shoulderActuator.setMotionData(motionData);
+  case CANID::SET_ELBOW_MOTIONDATA:
+    return elbowActuator.setMotionData(motionData);
+  case CANID::SET_WRIST_PITCH_MOTIONDATA:
+    return wristController.setPitchMotionData(motionData);
+  case CANID::SET_WRIST_ROLL_MOTIONDATA:
+    return wristController.setRollMotionData(motionData);
+  case CANID::SET_CLAW_MOTIONDATA:
+    return clawController.setMotionData(motionData);
+  default:
+    return MBED_ERROR_INVALID_ARGUMENT;
   }
 
   return MBED_SUCCESS;
@@ -170,41 +178,42 @@ static mbed_error_status_t setToolTipDeployment(CANMsg &msg) {
 
 // Enable or disable PID tuning mode10
 static mbed_error_status_t setPIDTuningMode(CANMsg &msg) {
-  return MBED_SUCCESS;  // TODO
+  return MBED_SUCCESS; // TODO
 }
 
 // Configure PID parameters
 static mbed_error_status_t setPIDParameter(CANMsg &msg) {
-  return MBED_SUCCESS;  // TODO
+  return MBED_SUCCESS; // TODO
 }
 
 // Handler function mappings
-static CANMsg::CANMsgHandlerMap canHandlerMap = {{CANID::SET_OVERRIDE_FLAGS, &setOverrideFlags},
+static CANMsg::CANMsgHandlerMap canHandlerMap = {
+    {CANID::SET_OVERRIDE_FLAGS, &setOverrideFlags},
 
-                                                 {CANID::SET_TURNTABLE_CONTROL_MODE, &setControlMode},
-                                                 {CANID::SET_SHOULDER_CONTROL_MODE, &setControlMode},
-                                                 {CANID::SET_ELBOW_CONTROL_MODE, &setControlMode},
-                                                 {CANID::SET_WRIST_CONTROL_MODE, &setControlMode},
-                                                 {CANID::SET_CLAW_CONTROL_MODE, &setControlMode},
+    {CANID::SET_TURNTABLE_CONTROL_MODE, &setControlMode},
+    {CANID::SET_SHOULDER_CONTROL_MODE, &setControlMode},
+    {CANID::SET_ELBOW_CONTROL_MODE, &setControlMode},
+    {CANID::SET_WRIST_CONTROL_MODE, &setControlMode},
+    {CANID::SET_CLAW_CONTROL_MODE, &setControlMode},
 
-                                                 {CANID::SET_TURNTABLE_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_SHOULDER_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_ELBOW_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_WRIST_PITCH_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_WRIST_ROLL_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_CLAW_MOTIONDATA, &setMotionData},
-                                                 {CANID::SET_TOOL_TIP_DEPLOYMENT, &setToolTipDeployment},
+    {CANID::SET_TURNTABLE_MOTIONDATA, &setMotionData},
+    {CANID::SET_SHOULDER_MOTIONDATA, &setMotionData},
+    {CANID::SET_ELBOW_MOTIONDATA, &setMotionData},
+    {CANID::SET_WRIST_PITCH_MOTIONDATA, &setMotionData},
+    {CANID::SET_WRIST_ROLL_MOTIONDATA, &setMotionData},
+    {CANID::SET_CLAW_MOTIONDATA, &setMotionData},
+    {CANID::SET_TOOL_TIP_DEPLOYMENT, &setToolTipDeployment},
 
-                                                 {CANID::RUN_WRIST_CALIBRATION, &runWristCalibration},
-                                                 {CANID::RUN_CLAW_CALIBRATION, &runClawCalibration},
+    {CANID::RUN_WRIST_CALIBRATION, &runWristCalibration},
+    {CANID::RUN_CLAW_CALIBRATION, &runClawCalibration},
 
-                                                 {CANID::SET_PID_TUNING_MODE, &setPIDTuningMode},
+    {CANID::SET_PID_TUNING_MODE, &setPIDTuningMode},
 
-                                                 {CANID::SET_PID_DEADZONE, &setPIDParameter},
-                                                 {CANID::SET_JOINT_PID_P, &setPIDParameter},
-                                                 {CANID::SET_JOINT_PID_I, &setPIDParameter},
-                                                 {CANID::SET_JOINT_PID_D, &setPIDParameter},
-                                                 {CANID::SET_JOINT_PID_BIAS, &setPIDParameter}};
+    {CANID::SET_PID_DEADZONE, &setPIDParameter},
+    {CANID::SET_JOINT_PID_P, &setPIDParameter},
+    {CANID::SET_JOINT_PID_I, &setPIDParameter},
+    {CANID::SET_JOINT_PID_D, &setPIDParameter},
+    {CANID::SET_JOINT_PID_BIAS, &setPIDParameter}};
 
 /*** ARM CANBus ***/
 /******************/
@@ -228,12 +237,14 @@ void rxCANProcessor() {
 
     // rxCANBuffer.waitFlagsAny(CANBUFFER_FLAG_DATA_READY);
 
-    // if (rxCANBuffer.pop(rxMsg) && (canHandlerMap.find(rxMsg.id) != canHandlerMap.end())) {
+    // if (rxCANBuffer.pop(rxMsg) && (canHandlerMap.find(rxMsg.id) !=
+    // canHandlerMap.end())) {
     //     if (canHandlerMap.count(rxMsg.id) > 0) {
     //         canHandlerMap[rxMsg.id](rxMsg);
     //     }
     //     else {
-    //         // TODO: Warn about unsupported CAN command (without flooding serial)
+    //         // TODO: Warn about unsupported CAN command (without flooding
+    //         serial)
     //     }
     // }
 
@@ -244,7 +255,7 @@ void rxCANProcessor() {
 // Outgoing message processor
 void txCANProcessor() {
   const int txInterdelay_millisec = 2;
-  const int txPeriod_millisec     = 10;
+  const int txPeriod_millisec = 10;
 
   CANMsg txMsg;
 
@@ -254,42 +265,42 @@ void txCANProcessor() {
   } motionReport;
 
   while (true) {
-    txMsg.id              = REPORT_TURNTABLE_MOTION;
+    txMsg.id = REPORT_TURNTABLE_MOTION;
     motionReport.position = turnTableActuator.getAngle_Degrees();
     motionReport.velocity = turnTableActuator.getVelocity_DegreesPerSec();
     txMsg.setPayload(motionReport);
     can1.write(txMsg);
     ThisThread::sleep_for(txInterdelay_millisec);
 
-    txMsg.id              = REPORT_SHOULDER_MOTION;
+    txMsg.id = REPORT_SHOULDER_MOTION;
     motionReport.position = shoulderActuator.getAngle_Degrees();
     motionReport.velocity = shoulderActuator.getVelocity_DegreesPerSec();
     txMsg.setPayload(motionReport);
     can1.write(txMsg);
     ThisThread::sleep_for(txInterdelay_millisec);
 
-    txMsg.id              = REPORT_ELBOW_MOTION;
+    txMsg.id = REPORT_ELBOW_MOTION;
     motionReport.position = elbowActuator.getAngle_Degrees();
     motionReport.velocity = elbowActuator.getVelocity_DegreesPerSec();
     txMsg.setPayload(motionReport);
     can1.write(txMsg);
     ThisThread::sleep_for(txInterdelay_millisec);
 
-    txMsg.id              = REPORT_WRIST_PITCH_MOTION;
+    txMsg.id = REPORT_WRIST_PITCH_MOTION;
     motionReport.position = wristController.getPitchAngle_Degrees();
     motionReport.velocity = wristController.getPitchVelocity_DegreesPerSec();
     txMsg.setPayload(motionReport);
     can1.write(txMsg);
     ThisThread::sleep_for(txInterdelay_millisec);
 
-    txMsg.id              = REPORT_WRIST_PITCH_MOTION;
+    txMsg.id = REPORT_WRIST_PITCH_MOTION;
     motionReport.position = wristController.getRollAngle_Degrees();
     motionReport.velocity = wristController.getRollVelocity_DegreesPerSec();
     txMsg.setPayload(motionReport);
     can1.write(txMsg);
     ThisThread::sleep_for(txInterdelay_millisec);
 
-    txMsg.id              = REPORT_CLAW_MOTION;
+    txMsg.id = REPORT_CLAW_MOTION;
     motionReport.position = clawController.getGapDistance_Cm();
     motionReport.velocity = clawController.getGapVelocity_CmPerSec();
     txMsg.setPayload(motionReport);

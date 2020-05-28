@@ -15,15 +15,17 @@ Motor::Motor(PinName pwm, PinName dir, bool inverted, int freqInHz, float limit)
 }
 
 Motor::Motor(t_motorConfig motorConfig)
-    : Motor(motorConfig.pwmPin, motorConfig.dirPin, motorConfig.inverted, motorConfig.freqInHz, motorConfig.limit) {}
+    : Motor(motorConfig.pwmPin, motorConfig.dirPin, motorConfig.inverted,
+            motorConfig.freqInHz, motorConfig.limit) {}
 
 void Motor::setPower(float dutyCycle) {
   m_dir = ((dutyCycle > 0.0) != m_inverted);
   m_pwm = fmin(fabs(dutyCycle), m_limit);
 }
 
-// TODO: this function results in a warning "control reaches end of non-void function", not sure how to fix it
-Motor& Motor::operator=(int dutyCycle) {
+// TODO: this function results in a warning "control reaches end of non-void
+// function", not sure how to fix it
+Motor &Motor::operator=(int dutyCycle) {
   this->setPower(dutyCycle);
   return *this;
 }
