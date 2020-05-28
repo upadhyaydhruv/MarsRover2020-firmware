@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "can_config.h"
-#include "mbed.h"
-#include "mbed_config.h"
-#include "rover_config.h"
-
 #include "ActuatorController.h"
 #include "CANMsg.h"
 #include "ContServo.h"
@@ -15,8 +10,12 @@
 #include "EncoderAbsolute_PWM.h"
 #include "LimServo.h"
 #include "Neopixel_Blocking.h"
+#include "can_config.h"
+#include "mbed.h"
+#include "mbed_config.h"
+#include "rover_config.h"
 
-#define POS_TOL 1
+#define POS_TOL   1
 #define MOVE_FLAG (1UL << 0)
 
 // Init. Components

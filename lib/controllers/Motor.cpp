@@ -1,4 +1,5 @@
 #include "Motor.h"
+
 #include <cmath>
 
 Motor::Motor(PinName pwm, PinName dir, bool inverted, int freqInHz, float limit)

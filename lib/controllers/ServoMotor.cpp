@@ -1,4 +1,5 @@
 #include "ServoMotor.h"
+
 #include <cmath>
 
 ServoMotor::ServoMotor(PinName pwm, bool inverted, float min_pulsewidth_ms, float max_pulsewidth_ms, float limit)

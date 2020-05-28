@@ -1,4 +1,5 @@
 #include "ActuatorController.h"
+
 #include <cmath>
 
 ActuatorController::ActuatorController(t_actuatorConfig actuatorConfig, Motor &motor, Encoder &encoder,
