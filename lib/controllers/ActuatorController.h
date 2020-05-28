@@ -9,12 +9,8 @@
 static DigitalIn NULL_DIGITAL_IN = DigitalIn(NC);
 
 class ActuatorController {
-public:
-  typedef enum t_actuatorControlMode : uint8_t {
-    motorPower,
-    velocity,
-    position
-  } t_actuatorControlMode;
+ public:
+  typedef enum t_actuatorControlMode : uint8_t { motorPower, velocity, position } t_actuatorControlMode;
 
   typedef struct {
     t_actuatorControlMode defaultControlMode = motorPower;
@@ -28,25 +24,22 @@ public:
     float watchDogTimeout_Seconds = 3.0;
   } t_actuatorConfig;
 
-  explicit ActuatorController(t_actuatorConfig actuatorConfig, Motor &motor,
-                              Encoder &encoder,
-                              DigitalIn &limSwitchMin = NULL_DIGITAL_IN,
-                              DigitalIn &limSwitchMax = NULL_DIGITAL_IN);
+  explicit ActuatorController(t_actuatorConfig actuatorConfig, Motor &motor, Encoder &encoder,
+                              DigitalIn &limSwitchMin = NULL_DIGITAL_IN, DigitalIn &limSwitchMax = NULL_DIGITAL_IN);
 
   mbed_error_status_t setControlMode(t_actuatorControlMode controlMode);
 
   mbed_error_status_t setMotorPower_Percentage(float percentage);
-  mbed_error_status_t
-  setVelocity_DegreesPerSec(float degreesPerSec);      // Need to mod for Servo
-  mbed_error_status_t setAngle_Degrees(float degrees); // Need to mod for Servo
+  mbed_error_status_t setVelocity_DegreesPerSec(float degreesPerSec);  // Need to mod for Servo
+  mbed_error_status_t setAngle_Degrees(float degrees);                 // Need to mod for Servo
 
   mbed_error_status_t setMotionData(float motionData);
 
   t_actuatorControlMode getControlMode();
 
   float getMotorPower_Percentage();
-  float getVelocity_DegreesPerSec(); // Need to mod for Servo
-  float getAngle_Degrees();          // Need to mod for Servo
+  float getVelocity_DegreesPerSec();  // Need to mod for Servo
+  float getAngle_Degrees();           // Need to mod for Servo
 
   mbed_error_status_t update();
 
@@ -57,7 +50,7 @@ public:
   bool isPastMinAngle();
   bool isPastMaxAngle();
 
-private:
+ private:
   t_actuatorControlMode m_controlMode;
   t_actuatorConfig m_actuatorConfig;
 
