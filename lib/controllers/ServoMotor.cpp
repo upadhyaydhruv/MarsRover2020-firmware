@@ -5,7 +5,7 @@
 ServoMotor::ServoMotor(PinName pwm, bool inverted, float min_pulsewidth_ms, float max_pulsewidth_ms, float limit)
     : Motor(NC, NC),
       m_servo(pwm, Servo::CONT_SERVO, limit, max_pulsewidth_ms, min_pulsewidth_ms),
-      m_inverted(inverted){};
+      m_inverted(inverted) {}
 
 ServoMotor::ServoMotor(t_motorConfig motorConfig) : ServoMotor(motorConfig.pwmPin, motorConfig.inverted) {}
 
