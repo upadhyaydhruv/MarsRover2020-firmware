@@ -5,179 +5,125 @@
 
 #include <string.h>
 
+#include "AnalogInputGroup.h"
+#include "DigitalInputGroup.h"
+#include "FrameController.h"
 #include "mbed.h"
-#include "rover_config.h"
+
+using namespace FrameProtocol;
 
 #define DEBUG
 
-static constexpr uint32_t MAX_UINT32               = 0xFFFFFFFF;
 static constexpr uint16_t SEND_INTERVAL_MS         = 100;
 static constexpr uint8_t DEBOUNCE_THRES            = 3;
 static constexpr uint8_t ANALOG_NUM_SAMPLE_AVERAGE = 5;
 
-DigitalIn joy_btn(JOY_BTN);
-DigitalIn pb_1(PB1);
-DigitalIn pb_2(PB2);
-DigitalIn sw_1a(SW_1A);
-DigitalIn sw_1b(SW_1B);
-DigitalIn sw_2a(SW_2A);
-DigitalIn sw_2b(SW_2B);
+static constexpr uint8_t NUM_BTNS     = 3;
+static constexpr uint8_t NUM_SWITCHES = 4;
+static constexpr uint8_t NUM_JOYS     = 4;
+static constexpr uint8_t NUM_POTS     = 2;
 
-static DigitalIn digital_inputs[] = {
-    joy_btn, pb_1, pb_2, sw_1a, sw_1b, sw_2a, sw_2b,
+BusIn digital_inputs_bus_btns(JOY_BTN, PB1, PB2);
+BusIn digital_inputs_bus_switches(SW_1A, SW_1B, SW_2A, SW_2B);
+
+// we can tune these parameters while testing
+DigitalInputGroup btns(digital_inputs_bus_btns, NUM_BTNS, InputDebounceType::INTERGRATING, DEBOUNCE_THRES);
+DigitalInputGroup switches(digital_inputs_bus_switches, NUM_SWITCHES, InputDebounceType::INTERGRATING, DEBOUNCE_THRES);
+
+FrameController::DigitalFrameConfig btns_frame_config = {
+    .boardType  = BoardType::MASTER,
+    .inputType  = DigitalInputType::BTN,
+    .inputGroup = btns,
 };
 
-static constexpr uint8_t NUM_DIGITAL_IN = sizeof(digital_inputs) / sizeof(PinName);
-// Although for the test board, there is only 7 digital inputs, in the real boards
-// there can be more than 8 digital inputs, so using uint16_t here
-uint16_t digital_inputs_values                 = 0;
-uint16_t digital_inputs_curr_values            = 0;
-uint16_t digital_inputs_counts[NUM_DIGITAL_IN] = {0};
-
-AnalogIn joy_sm_x(JOY_SM_X);
-AnalogIn joy_sm_y(JOY_SM_Y);
-AnalogIn joy_x(JOY_X);
-AnalogIn joy_y(JOY_Y);
-AnalogIn pot_al(POT_AL);
-AnalogIn slide_pot_al(SLIDE_POT_AL);
-
-static AnalogIn analog_inputs[] = {
-    joy_sm_x, joy_sm_y, joy_x, joy_y, pot_al, slide_pot_al,
+FrameController::DigitalFrameConfig switches_frame_config = {
+    .boardType  = BoardType::MASTER,
+    .inputType  = DigitalInputType::SWITCH,
+    .inputGroup = switches,
 };
 
-static constexpr uint8_t NUM_ANALOG_IN                                  = sizeof(analog_inputs) / sizeof(PinName);
-uint16_t analog_inputs_values[NUM_ANALOG_IN][ANALOG_NUM_SAMPLE_AVERAGE] = {0};
-uint16_t analog_inputs_values_idx[NUM_ANALOG_IN]                        = {0};
-uint32_t analog_inputs_sums[NUM_ANALOG_IN]                              = {0};
+AnalogBusIn analog_inputs_bus_joys(JOY_SM_X, JOY_SM_Y, JOY_X, JOY_Y);
+AnalogBusIn analog_inputs_bus_pots(POT_AL, SLIDE_POT_AL);
 
-static constexpr uint8_t NUM_BYTES_DIGITAL_IN    = sizeof(uint16_t);
-static constexpr uint8_t NUM_BYTES_PER_ANALOG_IN = sizeof(uint16_t);
-static constexpr uint16_t NUM_BYTES_ANALOG_IN    = sizeof(uint16_t) * NUM_ANALOG_IN;
+AnalogInputGroup joys(analog_inputs_bus_joys, NUM_JOYS, ANALOG_NUM_SAMPLE_AVERAGE);
+AnalogInputGroup pots(analog_inputs_bus_pots, NUM_POTS, ANALOG_NUM_SAMPLE_AVERAGE);
 
-// Timer for checking interval between sending data to PC
+FrameController::AnalogFrameConfig joys_frame_config = {
+    .boardType  = BoardType::MASTER,
+    .inputType  = AnalogInputType::JOY,
+    .inputGroup = joys,
+};
+
+FrameController::AnalogFrameConfig pots_frame_config = {
+    .boardType  = BoardType::MASTER,
+    .inputType  = AnalogInputType::POT,
+    .inputGroup = pots,
+};
+
 Timer timer;
 
 // Serial object for sending data to PC
-Serial pc(USBTX, USBRX);
+RawSerial pc(USBTX, USBRX);
 
-// Integrating debouncing is applied, not sure if this is necessary, needs testing
-void read_but_switches(uint16_t& digital_inputs_values, uint16_t& digital_inputs_curr_values,
-                       uint16_t digital_inputs_counts[NUM_DIGITAL_IN]) {
-  for (int i = 0; i < NUM_DIGITAL_IN; i++) {
-    int val = digital_inputs[i].read();  // val = 0 or 1
-    // if we read the same value as previous read, increment count
-    if ((digital_inputs_curr_values & 1 << i) == val) digital_inputs_counts[i]++;
-    // if not, set count back to zero
-    else
-      digital_inputs_counts[i] = 0;
-    // when there are DEBOUNCE_THRES number of consecutive reads of the same value
-    if (digital_inputs_counts[i] >= DEBOUNCE_THRES) {
-      digital_inputs_values |= (digital_inputs_curr_values & 1 << i);
-    }
-
-    // record the current value for comparsion in next read
-    digital_inputs_curr_values |= val << i;
-  }
-}
-
-// Not sure if the mbed analogIn reads fast enough, needs testing
-// Moving averaging is applied, not sure if this is necessary, needs testing
-void read_joy_pot(uint16_t analog_inputs_values[NUM_ANALOG_IN][ANALOG_NUM_SAMPLE_AVERAGE],
-                  uint16_t analog_inputs_values_idx[NUM_ANALOG_IN], uint32_t analog_inputs_sums[NUM_ANALOG_IN]) {
-  for (int i = 0; i < NUM_ANALOG_IN; i++) {
-    uint16_t val      = analog_inputs[i].read();
-    uint16_t curr_idx = analog_inputs_values_idx[i];
-
-    analog_inputs_sums[i] -= analog_inputs_values[i][curr_idx];
-    analog_inputs_values[i][curr_idx] = val;
-    analog_inputs_sums[i] += analog_inputs_values[i][curr_idx];
-
-    curr_idx++;
-    if (curr_idx > ANALOG_NUM_SAMPLE_AVERAGE) curr_idx = 0;
-
-    analog_inputs_values_idx[i] = curr_idx;
-  }
-}
-
-bool interval_passed(uint32_t start_time, uint32_t current_time, uint16_t interval) {
-  if (current_time > start_time) return (current_time - start_time) > interval;
-  // else the timer has wrapped around
-  else
-    return (MAX_UINT32 - start_time + current_time) > interval;
-}
-
-void prepare_data(uint8_t* outbuff, uint16_t& digital_inputs_values, uint32_t analog_inputs_sums[NUM_ANALOG_IN]) {
-  memcpy(outbuff, &digital_inputs_values, NUM_BYTES_DIGITAL_IN);
-
-  for (int i = 0; i < NUM_ANALOG_IN; i++) {
-    /*
-            Before the moving average array for each input is filled at least once, some elements will be zero,
-            but it's probably ok to assume it will be filled by the time we calculate the average, so we'll just
-            divide by ANALOG_NUM_SAMPLE_AVERAGE here
-            But testing is still needed
-    */
-    uint16_t avg = analog_inputs_sums[i] / ANALOG_NUM_SAMPLE_AVERAGE;
-    memcpy(outbuff + NUM_BYTES_DIGITAL_IN + i * sizeof(avg), &avg, sizeof(avg));
-  }
-}
-
-void clean_data(uint16_t& digital_inputs_values, uint16_t& digital_inputs_curr_values,
-                uint16_t digital_inputs_counts[NUM_DIGITAL_IN],
-                uint16_t analog_inputs_values[NUM_ANALOG_IN][ANALOG_NUM_SAMPLE_AVERAGE],
-                uint16_t analog_inputs_values_idx[NUM_ANALOG_IN], uint32_t analog_inputs_sums[NUM_ANALOG_IN]) {
-  digital_inputs_values      = 0;
-  digital_inputs_curr_values = 0;
-
-  memset(digital_inputs_counts, 0, sizeof(digital_inputs_counts[0]) * NUM_DIGITAL_IN);
-
-  memset(analog_inputs_values, 0, sizeof(analog_inputs_values[0][0]) * NUM_ANALOG_IN * ANALOG_NUM_SAMPLE_AVERAGE);
-  memset(analog_inputs_values_idx, 0, sizeof(analog_inputs_values_idx[0]) * NUM_ANALOG_IN);
-  memset(analog_inputs_sums, 0, sizeof(analog_inputs_sums[0]) * NUM_ANALOG_IN);
-}
-
-void send_to_pc(uint16_t& digital_inputs_values, uint16_t& digital_inputs_curr_values,
-                uint16_t digital_inputs_counts[NUM_DIGITAL_IN],
-                uint16_t analog_inputs_values[NUM_ANALOG_IN][ANALOG_NUM_SAMPLE_AVERAGE],
-                uint16_t analog_inputs_values_idx[NUM_ANALOG_IN], uint32_t analog_inputs_sums[NUM_ANALOG_IN]) {
-  static uint8_t outbuff[NUM_BYTES_DIGITAL_IN + NUM_BYTES_ANALOG_IN] = {0};
-
-  prepare_data(outbuff, digital_inputs_values, analog_inputs_sums);
-
-  // sending data out
-  for (unsigned i = 0; i < sizeof(outbuff); i++) {
-    pc.putc(outbuff[i]);
-  }
-
-  clean_data(digital_inputs_values, digital_inputs_curr_values, digital_inputs_counts, analog_inputs_values,
-             analog_inputs_values_idx, analog_inputs_sums);
-}
+FrameController frame_controller(&pc);
 
 int main() {
   printf("Beginning robot controller fw app.\r\n");
-  // set flow control, as we are sending a lot stuff
+
+  // set flow control, as we will be sending a lot stuffs
   pc.set_flow_control(SerialBase::RTSCTS, USB_RTS, USB_CTS);
+
+#ifdef DEBUG
+  uint16_t btsn_invalid_reads = 0xFFFF, switches_invalid_reads = 0xFFFF;
+  uint16_t btns_values = 0, switches_values = 0;
+  float joys_values[NUM_JOYS] = {0};
+  float pots_values[NUM_POTS] = {0};
+#endif
+
   timer.start();
 
   while (1) {
     uint32_t start_time = timer.read_ms();
 
-    // Assume all inputs during SEND_INTERVAL_MS is unchanging, i.e. all inputs in this period is accumulated
-    while (!interval_passed(start_time, timer.read_ms(), SEND_INTERVAL_MS)) {
-      // May need to implement these two read functions as threads, needs testing
-      read_but_switches(digital_inputs_values, digital_inputs_curr_values, digital_inputs_counts);
-      read_joy_pot(analog_inputs_values, analog_inputs_values_idx, analog_inputs_sums);
+    // Assume all inputs during SEND_INTERVAL_MS is unchanging,
+    // i.e. all inputs in this period is accumulated
+    while (!DigitalInputGroup::interval_passed(start_time, timer.read_ms(), SEND_INTERVAL_MS)) {
+      // May need to implement these reads as threads, needs testing
+      btns.read();
+      switches.read();
+      joys.read();
+      pots.read();
     }
 
 #ifndef DEBUG
-    send_to_pc(digital_inputs_values, digital_inputs_curr_values, digital_inputs_counts, analog_inputs_values,
-               analog_inputs_values_idx, analog_inputs_sums);
+    frame_controller.sendFrame(btns_frame_config);
+    frame_controller.sendFrame(switches_frame_config);
+    frame_controller.sendFrame(joys_frame_config);
+    frame_controller.sendFrame(pots_frame_config);
 #else
-    printf("Digital Inputs: %x", digital_inputs_values);
+    btsn_invalid_reads     = btns.getValuesAndInvalidReads(btns_values);
+    switches_invalid_reads = btns.getValuesAndInvalidReads(switches_values);
 
-    for (int i = 0; i < NUM_ANALOG_IN; i++) {
-      float avg = analog_inputs_sums[i] / ANALOG_NUM_SAMPLE_AVERAGE;
-      printf("Andlog Inputs %d: %f", i, avg);
-    }
+    joys.getValues(joys_values);
+    pots.getValues(pots_values);
+
+    printf("Digital Inputs: JOY_BTN: %d, valid: %d", btns_values & 0x1, btsn_invalid_reads & 0x1);
+    printf("Digital Inputs: PB1: %d, valid: %d", (btns_values & 0x1 << 1) >> 1, (btsn_invalid_reads & 0x1 << 1) >> 1);
+    printf("Digital Inputs: PB2: %d, valid: %d", (btns_values & 0x1 << 2) >> 2, (btsn_invalid_reads & 0x1 << 2) >> 2);
+    printf("Digital Inputs: SW_1A: %d, valid: %d", switches_values & 0x1, switches_invalid_reads & 0x1);
+    printf("Digital Inputs: SW_1B: %d, valid: %d", (switches_values & 0x1 << 1) >> 1,
+           (switches_invalid_reads & 0x1 << 1) >> 1);
+    printf("Digital Inputs: SW_2A: %d, valid: %d", (switches_values & 0x1 << 2) >> 2,
+           (switches_invalid_reads & 0x1 << 2) >> 2);
+    printf("Digital Inputs: SW_2B: %d, valid: %d", (switches_values & 0x1 << 3) >> 3,
+           (switches_invalid_reads & 0x1 << 3) >> 3);
+
+    printf("Digital Inputs: JOY_SM_X: %f", joys_values[0]);
+    printf("Digital Inputs: JOY_SM_Y: %f", joys_values[1]);
+    printf("Digital Inputs: JOY_X: %f", joys_values[2]);
+    printf("Digital Inputs: JOY_Y: %f", joys_values[3]);
+    printf("Digital Inputs: POT_AL: %f", pots_values[0]);
+    printf("Digital Inputs: SLIDE_POT_AL: %f", pots_values[1]);
 
 #endif
   }
